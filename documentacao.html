@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentacao - Trigger trg_produto_update</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <span class="brand">Documentacao &middot; Auditoria em MySQL</span>
+      <a class="doc-link" href="index.php">Voltar para o sistema</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <article class="panel">
+      <div class="panel-head">Documentacao tecnica da atividade</div>
+      <div class="panel-body">
+        <h1 style="margin-top:0;font-size:20px;">Registro automatico de alteracoes em produtos</h1>
+        <p>
+          O sistema registra mudancas feitas na tabela <code>produtos</code> na tabela <code>historico_alteracoes</code> por meio da trigger <code>trg_produto_update</code>, sem depender de codigo de log na aplicacao.
+        </p>
+
+        <h2 style="font-size:15px;margin-top:20px;">Integrantes</h2>
+        <ul style="margin:6px 0 18px;padding-left:20px;">
+          <li>André Bronca</li>
+          <li>Guilherme Amâncio Hashish</li>
+          <li>Luiza Moraes Moura</li>
+          <li>Matheus Venâncio</li>
+          <li>Ruan Cardoso</li>
+        </ul>
+
+        <h2 style="font-size:15px;margin-top:20px;">Tabelas</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Tabela</th>
+              <th>Colunas principais</th>
+              <th>Funcao</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>produtos</code></td>
+              <td><code>id</code> (PK), <code>nome</code>, <code>descricao</code>, <code>preco</code>, <code>quantidade</code></td>
+              <td>Cadastro dos itens e saldos atuais.</td>
+            </tr>
+            <tr>
+              <td><code>historico_alteracoes</code></td>
+              <td><code>id</code> (PK), <code>id_produto</code> (FK), <code>data_alteracao</code>, <code>campo_alterado</code>, <code>valor_antigo</code>, <code>valor_novo</code></td>
+              <td>Log de cada coluna modificada apos um <code>UPDATE</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2 style="font-size:15px;margin-top:20px;">Como a trigger atua</h2>
+        <p>
+          A trigger e <code>AFTER UPDATE ON produtos FOR EACH ROW</code>. Cada coluna (<code>nome</code>, <code>descricao</code>, <code>preco</code> e <code>quantidade</code>) e comparada com <code>&lt;=&gt;</code>: se <code>NOT (OLD.campo &lt;=&gt; NEW.campo)</code>, uma linha e inserida em <code>historico_alteracoes</code>. Usar <code>&lt;=&gt;</code> evita falha quando um campo passa de <code>NULL</code> para um texto ou vice-versa, e quando mais de uma coluna muda no mesmo comando, cada coluna gera seu proprio registro.
+        </p>
+
+        <h2 style="font-size:15px;margin-top:20px;">Definicao da trigger</h2>
+        <pre style="background:#1e242b;color:#f4f5f7;padding:12px;overflow-x:auto;font-size:12px;"><code>CREATE TRIGGER trg_produto_update
+AFTER UPDATE ON produtos
+FOR EACH ROW
+BEGIN
+  IF NOT (OLD.nome &lt;=&gt; NEW.nome) THEN
+    INSERT INTO historico_alteracoes (id_produto, data_alteracao, campo_alterado, valor_antigo, valor_novo)
+    VALUES (NEW.id, NOW(), 'nome', OLD.nome, NEW.nome);
+  END IF;
+
+  IF NOT (OLD.descricao &lt;=&gt; NEW.descricao) THEN
+    INSERT INTO historico_alteracoes (id_produto, data_alteracao, campo_alterado, valor_antigo, valor_novo)
+    VALUES (NEW.id, NOW(), 'descricao', OLD.descricao, NEW.descricao);
+  END IF;
+
+  IF NOT (OLD.preco &lt;=&gt; NEW.preco) THEN
+    INSERT INTO historico_alteracoes (id_produto, data_alteracao, campo_alterado, valor_antigo, valor_novo)
+    VALUES (NEW.id, NOW(), 'preco', OLD.preco, NEW.preco);
+  END IF;
+
+  IF NOT (OLD.quantidade &lt;=&gt; NEW.quantidade) THEN
+    INSERT INTO historico_alteracoes (id_produto, data_alteracao, campo_alterado, valor_antigo, valor_novo)
+    VALUES (NEW.id, NOW(), 'quantidade', OLD.quantidade, NEW.quantidade);
+  END IF;
+END;</code></pre>
+
+        <h2 style="font-size:15px;margin-top:20px;">Teste rapido</h2>
+        <p style="margin-bottom:0;">
+          Na tela principal, edite o preco ou a quantidade de um produto e salve. A linha nova aparece na tabela de historico com o valor anterior e o valor atual.
+        </p>
+      </div>
+    </article>
+  </main>
+</body>
+</html>
